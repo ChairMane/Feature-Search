@@ -1,4 +1,5 @@
 import numpy as np
+from makeGraph import featGraph
 
 class featureSearch:
     def __init__(self, data):
@@ -34,28 +35,32 @@ class featureSearch:
             best = 0
             if i == n:
                 accuracy = self.leave_one_out_CV(X, Y, current_set, None, m)
-                accuracies.append((frozenset(current_set), accuracy))
+                #accuracies.append((frozenset(current_set), accuracy))
+                accuracies.append((-1, accuracy))
             else:
                 for k in range(n):
                     if k in current_set:
                         current_copy = set()
                         current_copy = current_set.copy()
                         current_copy.remove(k)
-                        print('--Considering removing feature {}'.format(k+1))
+                        #print('--Considering removing feature {}'.format(k+1))
                         accuracy = self.leave_one_out_CV(X, Y, current_copy, None, m)
 
                         if accuracy > best:
                             best = accuracy
                             feature_to_subtract = k
                 current_set.remove(feature_to_subtract)
-                accuracies.append((frozenset(current_set), best))
+                #accuracies.append((frozenset(current_set), best))
+                accuracies.append((feature_to_subtract+1, best))
                 print('Removed feature {} on level {}'.format(feature_to_subtract+1, i+1))
 
         default_rate = np.sum(Y == 1)
         if default_rate > m - default_rate:
-            accuracies.append(default_rate/m)
+            #accuracies.append((frozenset(), default_rate/m))
+            accuracies.append((0, default_rate / m))
         else:
-            accuracies.append((m - default_rate)/m)
+            #accuracies.append((frozenset(), (m - default_rate)/m))
+            accuracies.append((0, (m - default_rate) / m))
         return accuracies
 
     def forward_feature_search(self):
@@ -69,32 +74,40 @@ class featureSearch:
         correspond = {}
         default_rate = np.sum(Y == 1)
         if default_rate > m - default_rate:
-            accuracies.append((frozenset(current_set), default_rate/m))
+            #accuracies.append((frozenset(current_set), default_rate/m))
+            accuracies.append((0, default_rate/m))
         else:
-            accuracies.append((frozenset(current_set), (m - default_rate)/m))
+            #accuracies.append((frozenset(current_set), (m - default_rate)/m))
+            accuracies.append((0, (m-default_rate)/m))
         for i in range(n):
             print('On level {} of the search tree.'.format(i+1))
             feature_to_add = -1
             best = 0
             for k in range(n):
                 if k not in current_set:
-                    print('--Considering adding feature {}'.format(k+1))
+                    #print('--Considering adding feature {}'.format(k+1))
                     accuracy = self.leave_one_out_CV(X, Y, current_set, k, m)
 
                     if accuracy > best:
                         best = accuracy
                         feature_to_add = k
             current_set.add(feature_to_add)
-            accuracies.append((frozenset(current_set), best))
+            #accuracies.append((frozenset(current_set), best))
+            accuracies.append((feature_to_add+1, best))
             print('Added feature {} on level {}'.format(feature_to_add+1, i+1))
         return accuracies
 
 
 if __name__ == '__main__':
-    #filename = input('Enter file name:')
-    data = np.genfromtxt('CS170_SMALLtestdata__120.txt')
+    filename = input('Enter file name:')
+    data = np.genfromtxt(filename)
     search = featureSearch(data)
     faccuracies = search.forward_feature_search()
     baccuracies = search.backward_feature_search()
     print('forward accuracies', faccuracies)
     print('backward accuracies', baccuracies)
+    forward_graph = featGraph(faccuracies)
+    backward_graph = featGraph(baccuracies)
+    forward_graph.make_bars('Forward Feature Selection on {}'.format(filename))
+    backward_graph.make_bars('Backward Feature Selection on {}'.format(filename), 1)
+
