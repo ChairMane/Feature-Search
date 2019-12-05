@@ -1,5 +1,6 @@
 import numpy as np
 from makeGraph import featGraph
+from training import sampleTraining
 
 class featureSearch:
     def __init__(self, data):
@@ -29,13 +30,14 @@ class featureSearch:
         (m, n) = X.shape
         current_set = {s for s in range(n)}
         accuracies = []
+        correspond = {}
         for i in range(n, 0, -1):
             print('On level {} of the search tree.'.format(i+1))
             feature_to_subtract = -1
             best = 0
             if i == n:
                 accuracy = self.leave_one_out_CV(X, Y, current_set, None, m)
-                #accuracies.append((frozenset(current_set), accuracy))
+                correspond[frozenset(current_set)] = accuracy
                 accuracies.append((-1, accuracy))
             else:
                 for k in range(n):
@@ -50,18 +52,18 @@ class featureSearch:
                             best = accuracy
                             feature_to_subtract = k
                 current_set.remove(feature_to_subtract)
-                #accuracies.append((frozenset(current_set), best))
+                correspond[frozenset(current_set)] = best
                 accuracies.append((feature_to_subtract+1, best))
                 print('Removed feature {} on level {}'.format(feature_to_subtract+1, i+1))
 
         default_rate = np.sum(Y == 1)
         if default_rate > m - default_rate:
-            #accuracies.append((frozenset(), default_rate/m))
+            correspond[frozenset()] = default_rate/m
             accuracies.append((0, default_rate / m))
         else:
-            #accuracies.append((frozenset(), (m - default_rate)/m))
+            correspond[frozenset()] = (m - default_rate) / m
             accuracies.append((0, (m - default_rate) / m))
-        return accuracies
+        return accuracies, correspond
 
     def forward_feature_search(self):
         Y = np.copy(self.data[:, 0])    # Classifications
@@ -74,10 +76,10 @@ class featureSearch:
         correspond = {}
         default_rate = np.sum(Y == 1)
         if default_rate > m - default_rate:
-            #accuracies.append((frozenset(current_set), default_rate/m))
+            correspond[frozenset()] = default_rate / m
             accuracies.append((0, default_rate/m))
         else:
-            #accuracies.append((frozenset(current_set), (m - default_rate)/m))
+            correspond[frozenset()] = (m - default_rate) / m
             accuracies.append((0, (m-default_rate)/m))
         for i in range(n):
             print('On level {} of the search tree.'.format(i+1))
@@ -92,22 +94,42 @@ class featureSearch:
                         best = accuracy
                         feature_to_add = k
             current_set.add(feature_to_add)
-            #accuracies.append((frozenset(current_set), best))
+            correspond[frozenset(current_set)] = best
             accuracies.append((feature_to_add+1, best))
             print('Added feature {} on level {}'.format(feature_to_add+1, i+1))
-        return accuracies
+        return accuracies, correspond, Y, X
 
 
 if __name__ == '__main__':
     filename = input('Enter file name:')
+    choice = input('Is this a test? ')
     data = np.genfromtxt(filename)
-    search = featureSearch(data)
-    faccuracies = search.forward_feature_search()
-    baccuracies = search.backward_feature_search()
-    print('forward accuracies', faccuracies)
-    print('backward accuracies', baccuracies)
-    forward_graph = featGraph(faccuracies)
-    backward_graph = featGraph(baccuracies)
-    forward_graph.make_bars('Forward Feature Selection on {}'.format(filename))
-    backward_graph.make_bars('Backward Feature Selection on {}'.format(filename), 1)
+    (m, n) = data.shape
+    removal_size = int(m/10)
+    if choice == 'y':
+        i = 1
+        while len(data) > 0:
+            search = featureSearch(data)
+            faccuracies, fcorr = search.forward_feature_search()
+            baccuracies, bcorr = search.backward_feature_search()
+            print('forward accuracies', faccuracies)
+            print('backward accuracies', baccuracies)
+            forward_graph = featGraph(faccuracies)
+            backward_graph = featGraph(baccuracies)
+            forward_graph.make_bars('forward', 'Forward Feature Selection run {} on {}'.format(i, filename))
+            backward_graph.make_bars('backward', 'Backward Feature Selection run {} on {}'.format(i, filename), 1)
+            i += 1
+            new_data = sampleTraining(data, m, removal_size)
+            data = new_data.remove_some_data()
+            (m, n) = data.shape
+    else:
+        search = featureSearch(data)
+        faccuracies, fcorr = search.forward_feature_search()
+        baccuracies, bcorr = search.backward_feature_search()
+        print('forward accuracies', faccuracies)
+        print('backward accuracies', baccuracies)
+        forward_graph = featGraph(faccuracies)
+        backward_graph = featGraph(baccuracies)
+        forward_graph.make_bars('forward', 'Forward Feature Selection on {}'.format(filename))
+        backward_graph.make_bars('backward', 'Backward Feature Selection on {}'.format(filename), 1)
 
