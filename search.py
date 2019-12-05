@@ -96,7 +96,7 @@ class featureSearch:
             current_set.add(feature_to_add)
             correspond[frozenset(current_set)] = best
             accuracies.append((feature_to_add+1, best))
-            print('Added feature {} on level {}'.format(feature_to_add+1, i+1))
+            #print('Added feature {} on level {}'.format(feature_to_add+1, i+1))
         return accuracies, correspond, Y, X
 
 
@@ -110,7 +110,7 @@ if __name__ == '__main__':
         i = 1
         while len(data) > 0:
             search = featureSearch(data)
-            faccuracies, fcorr = search.forward_feature_search()
+            faccuracies, fcorr, Y, X = search.forward_feature_search()
             baccuracies, bcorr = search.backward_feature_search()
             print('forward accuracies', faccuracies)
             print('backward accuracies', baccuracies)
@@ -124,12 +124,15 @@ if __name__ == '__main__':
             (m, n) = data.shape
     else:
         search = featureSearch(data)
-        faccuracies, fcorr = search.forward_feature_search()
-        baccuracies, bcorr = search.backward_feature_search()
+        faccuracies, fcorr, Y, X = search.forward_feature_search()
+        #baccuracies, bcorr = search.backward_feature_search()
         print('forward accuracies', faccuracies)
-        print('backward accuracies', baccuracies)
+        #print('backward accuracies', baccuracies)
         forward_graph = featGraph(faccuracies)
-        backward_graph = featGraph(baccuracies)
+        #backward_graph = featGraph(baccuracies)
         forward_graph.make_bars('forward', 'Forward Feature Selection on {}'.format(filename))
-        backward_graph.make_bars('backward', 'Backward Feature Selection on {}'.format(filename), 1)
+        #backward_graph.make_bars('backward', 'Backward Feature Selection on {}'.format(filename), 1)
 
+    forward_scatter = featGraph(faccuracies)
+    forward_scatter.make_scatter(fcorr, 'forward', '{}: Using only Features'.format(filename), Y, X)
+    forward_scatter.make_3d_scatter(fcorr, 'forward', '{}: Using only Features'.format(filename), Y, X)
